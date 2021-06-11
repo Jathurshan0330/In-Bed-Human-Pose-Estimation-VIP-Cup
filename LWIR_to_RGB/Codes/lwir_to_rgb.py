@@ -16,12 +16,16 @@ import glob
 
 import numpy as np
 import random
-import tensorflow as tf
-from tensorflow.keras import datasets, layers, models
+# import tensorflow as tf
+# from tensorflow.keras import datasets, layers, models
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
+# import matplotlib.gridspec as gridspec
 import cv2 as cv
-
+from skimage import transform
+import skimage.io as io
+from skimage.transform import resize
+from skimage import transform
+from skimage import img_as_ubyte
 
 import torch
 import torchvision
@@ -47,11 +51,13 @@ cd '/content/drive/MyDrive/LWIR_to_RGB'
 
 dirc = "A"
 path_lwir = os.path.join(parent_dir,dirc)
-#os.mkdir(path_lwir)
+
 
 dirc = "B"
 path_rgb = os.path.join(parent_dir,dirc)
-#os.mkdir(path_rgb)
+
+# os.mkdir(path_lwir)
+# os.mkdir(path_rgb)
 
 path_lwir_train = os.path.join(path_lwir,"train" )
 #os.mkdir(path_lwir_train)
@@ -75,103 +81,63 @@ path_rgb_test = os.path.join(path_rgb, "test")
 
 """
 
-# Transfering uncovered images for train and val data
-
-cover_type = 'uncover'
-count = 1
-for i in range(1,21):
-  if i < 10:
-      data_name = "0000"+str(i)              
-  else:
-      data_name = "000"+str(i) 
-  
-  #Destination path
-  if i<=15: 
-    destination_lwir = path_lwir_train
-    destination_rgb = path_rgb_train
-    if i==15:
-      print("Moving last subject in Training")
-  elif (i>15 and i<=20):
-    destination_lwir = path_lwir_val
-    destination_rgb = path_rgb_val
-    if i==20:
-      print("Moving last subject in Val")
-
-  for j in range(1,46):
-    if j < 10:
-        img_name = "00000"+str(j)
+def get_data(source_path,destination_path, cover_type,start_sub,end_sub,count = 1):
+   
+  #count = 1
+  for i in range(start_sub,end_sub+1):
+    if i < 10:
+        data_name = "0000"+str(i)              
     else:
-        img_name = "0000"+str(j)  
-
-
-    #Source LWIR
-    source = '/content/drive/MyDrive/In-Bed-Human-Pose-Estimation(VIP-CUP)/train/' + data_name +'/IR/'+cover_type+'/image_'+img_name +'.png'
-    #im_ir = cv.imread(source)
-    #im_ir = cv.resize(im_ir, (576, 1024), interpolation = cv.INTER_AREA)
-    #print(im_ir.shape)
-    #cv.imwrite(os.path.join(destination_lwir,str(count)+'.png' ), im_ir)
-    shutil.copy(source, destination_lwir)
-    os.rename(os.path.join(destination_lwir,'image_'+img_name +'.png' ),os.path.join(destination_lwir,str(count)+'.png' ))
-    #count+=1
-
-    #Source RGB
-    source = '/content/drive/MyDrive/In-Bed-Human-Pose-Estimation(VIP-CUP)/train/' + data_name +'/RGB/'+cover_type+'/image_'+img_name +'.png'
-    im_rgb = cv.imread(source)
-    im_rgb = cv.resize(im_rgb, (120,160), interpolation = cv.INTER_AREA)
-    #print(im_rgb.shape)
-    cv.imwrite(os.path.join(destination_rgb,str(count)+'.png' ), im_rgb)
-    #shutil.copy(source, destination_rgb)
-    #os.rename(os.path.join(destination_rgb,'image_'+img_name +'.png' ),os.path.join(destination_rgb,str(count)+'.png' ))
-    count+=1
-    #break
-  #break
-
-# Transfering covered images for test data
-
-cover_type = 'cover2'    #change this for thin cover => "cover1" and thick cover => "cover2"
-#count = 1
-for i in range(71,73):      # any subjects in range 31-55 for thin cover and 56-80 for thick cover 
-  if i < 10:
-      data_name = "0000"+str(i)              
-  else:
-      data_name = "000"+str(i) 
-  
-  #Destination path
-
-  
-  destination_lwir = path_lwir_test
-  destination_rgb = path_rgb_test 
-  if i==32:
-    print("Moving last subject in Testing")
-
-  for j in range(1,46):
-    if j < 10:
-        img_name = "00000"+str(j)
+        data_name = "000"+str(i) 
+    print("Getting Data from : {}".format(data_name))
+    #Destination path
+    if i<=15: 
+      destination_lwir = os.path.join(destination_path,'A',"train" )
+      destination_rgb = os.path.join(destination_path,'B',"train" )
+      if i==15:
+        print("Moving last subject in Training")
+    elif (i>15 and i<=20):
+      destination_lwir = os.path.join(destination_path,'A',"val" )
+      destination_rgb = os.path.join(destination_path,'B',"val" )
+      if i==20:
+        print("Moving last subject in Val")
     else:
-        img_name = "0000"+str(j)  
+      destination_lwir = os.path.join(destination_path,'A',"test" )
+      destination_rgb = os.path.join(destination_path,'B',"test" )
+
+    data_path =  os.path.join(source_path, data_name) 
+
+    # get homography transformation matrices
+    H_rgb = np.array(np.load(os.path.join(data_path, "align_PTr_RGB.npy")))
+    H_ir = np.array(np.load(os.path.join(data_path, "align_PTr_IR.npy")))
+    H = np.matmul(np.linalg.inv(H_rgb), H_ir) # RGB -> IR tarnsformation
+    tform = transform.ProjectiveTransform(matrix=H)
 
 
-    #Source LWIR
-    source = '/content/drive/MyDrive/In-Bed-Human-Pose-Estimation(VIP-CUP)/train/' + data_name +'/IR/'+cover_type+'/image_'+img_name +'.png'
-    #im_ir = cv.imread(source)
-    #im_ir = cv.resize(im_ir, (576, 1024), interpolation = cv.INTER_AREA)
-    #print(im_ir.shape)
-    #cv.imwrite(os.path.join(destination_lwir,str(count)+'.png' ), im_ir)
-    shutil.copy(source, destination_lwir)
-    os.rename(os.path.join(destination_lwir,'image_'+img_name +'.png' ),os.path.join(destination_lwir,str(count)+'.png' ))
-    #count+=1
+    for img_name in os.listdir(os.path.join(data_path,'RGB',cover_type)):
+      if img_name.endswith('png'):
+        
+        #Source LWIR
+        source = data_path  +'/IR/'+cover_type+'/'+img_name 
+        shutil.copy(source, destination_lwir)
+        os.rename(os.path.join(destination_lwir,img_name ),os.path.join(destination_lwir,str(count)+'.png' ))
 
-    #Source RGB
-    source = '/content/drive/MyDrive/In-Bed-Human-Pose-Estimation(VIP-CUP)/train/' + data_name +'/RGB/'+cover_type+'/image_'+img_name +'.png'
-    im_rgb = cv.imread(source)
-    im_rgb = cv.resize(im_rgb, (120,160), interpolation = cv.INTER_AREA)
-    #print(im_rgb.shape)
-    cv.imwrite(os.path.join(destination_rgb,str(count)+'.png' ), im_rgb)
-    #shutil.copy(source, destination_rgb)
-    #os.rename(os.path.join(destination_rgb,'image_'+img_name +'.png' ),os.path.join(destination_rgb,str(count)+'.png' ))
-    count+=1
-    #break
-  #break
+
+        #Source RGB
+        source = data_path  +'/RGB/'+cover_type+'/'+img_name 
+        im_rgb = io.imread(source)
+        im_rgb = transform.warp(im_rgb, tform)
+        im_rgb = im_rgb[0:160, 0:120]
+        io.imsave(os.path.join(destination_rgb,str(count)+'.png' ), img_as_ubyte(im_rgb))
+        count+=1
+        
+  return count
+
+source_path = "/content/drive/MyDrive/In-Bed-Human-Pose-Estimation(VIP-CUP)/train/"
+destination_path = "/content/drive/MyDrive/LWIR_to_RGB"
+#get_data(source_path,destination_path, 'uncover',1,20)  ## Transfering uncovered images for train and val data
+gtest_count = get_data(source_path,destination_path, 'cover1',35,37)  # Transfering thin covered images for test data
+get_data(source_path,destination_path, 'cover2',76,77,gtest_count )  # Transfering thick covered images for test data
 
 """# Install 
  from https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix
@@ -184,7 +150,7 @@ os.chdir('pytorch-CycleGAN-and-pix2pix/')
 
 !pip install -r requirements.txt
 
-"""# Datasets
+"""# Create Datasets
 
 Download one of the official datasets with:
 
@@ -192,8 +158,6 @@ Download one of the official datasets with:
 
 Or use your own dataset by creating the appropriate folders and adding in the images. Follow the instructions [here](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/blob/master/docs/datasets.md#pix2pix-datasets).
 """
-
-#!bash ./datasets/download_pix2pix_dataset.sh facades
 
 cd '/content/drive/MyDrive/LWIR_to_RGB/pytorch-CycleGAN-and-pix2pix'
 
@@ -205,15 +169,15 @@ cd '/content/drive/MyDrive/LWIR_to_RGB/pytorch-CycleGAN-and-pix2pix'
 
 cd '/content/drive/MyDrive/LWIR_to_RGB'
 
-!python /content/drive/MyDrive/LWIR_to_RGB/pytorch-CycleGAN-and-pix2pix/train.py --dataroot /content/drive/MyDrive/LWIR_to_RGB --name lwir_rgb_jat --model pix2pix --direction AtoB  --save_epoch_freq 400 --n_epochs 200 --n_epochs_decay 200
+!python /content/drive/MyDrive/LWIR_to_RGB/pytorch-CycleGAN-and-pix2pix/train.py --dataroot /content/drive/MyDrive/LWIR_to_RGB --name lwir_rgb_jat_3 --model pix2pix --direction AtoB  --save_epoch_freq 200 --n_epochs 100 --n_epochs_decay 100
 
-ls '/content/drive/MyDrive/LWIR_to_RGB/checkpoints/lwir_rgb_jat/'
+ls '/content/drive/MyDrive/LWIR_to_RGB/checkpoints/lwir_rgb_jat_3/'
 
 """#Testing on trained model using covered images
 
 """
 
-!python /content/drive/MyDrive/LWIR_to_RGB/pytorch-CycleGAN-and-pix2pix/test.py --dataroot /content/drive/MyDrive/LWIR_to_RGB  --direction AtoB --model pix2pix --name lwir_rgb_jat --num_test 180
+!python /content/drive/MyDrive/LWIR_to_RGB/pytorch-CycleGAN-and-pix2pix/test.py --dataroot /content/drive/MyDrive/LWIR_to_RGB  --direction AtoB --model pix2pix --name lwir_rgb_jat_3 --num_test 180
 
 """# Not necessary but kept for reference
 
