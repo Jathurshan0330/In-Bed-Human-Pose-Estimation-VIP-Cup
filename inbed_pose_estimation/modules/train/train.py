@@ -13,8 +13,8 @@ def train(dataset_name_train, dataset_name_test, max_iter= 100, TL_model_dir= No
 
     trainer = DefaultTrainer(cfg) 
     
-    for name, param in trainer.model.named_parameters():
-        if name.split('.')[0]=='backbone':param.requires_grad=False
+    #for name, param in trainer.model.named_parameters():
+    #    if name.split('.')[0]=='backbone':param.requires_grad=False
 
     trainer.resume_or_load(resume=False)
     trainer.train()

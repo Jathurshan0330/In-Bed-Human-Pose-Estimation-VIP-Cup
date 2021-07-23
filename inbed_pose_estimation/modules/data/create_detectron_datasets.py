@@ -31,8 +31,8 @@ def get_paired_data(train_dirs, type_='RGB', n_samples=None, bbox_style=None, im
             #joints[:, 0]= joints[:,0]/width #x
             #joints[:, 1]= joints[:,1]/height #y
 
-            #joints[:, 2]= np.ones((14,)).astype('float') #0, 1: represents occluded/ unoccluded of the point
-            joints[:,0:2] = joints[:,0:2]-1 # according to inbed pose site
+            joints[:, 2]= np.ones((14,)).astype('float') #0, 1: represents occluded/ unoccluded of the point
+            #joints[:,0:2] = joints[:,0:2]-1 # according to inbed pose site
 
             joints_flatten= joints.flatten()
             
