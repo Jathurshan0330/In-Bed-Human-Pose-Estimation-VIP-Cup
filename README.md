@@ -4,3 +4,7 @@ This repository contains our conducted experiments, codes and solutions for the 
 
 Our final solution can be found at: [[slides](https://jathurshan0330.github.io/talks/NFP_Undercover_VIP_CUP_Finals_2021.pdf)][[preprint](https://arxiv.org/abs/2110.03578)][[code](https://github.com/MohamedAfham/CD_HPE)]
 
+
+ ![Image](/NFP_Undercover_VIP_CUP_Finals_2021.jpg)
+
+
